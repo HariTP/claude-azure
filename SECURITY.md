@@ -8,4 +8,4 @@ Linux host-only encryption is weaker than host+TPM protection. Windows DPAPI Cur
 
 The container is restricted and receives only its own source code and secret-bearing stdin; it is not given project files, the user's home directory, a host socket, or cloud administration credentials. Prompt data and source snippets provided by Claude Code still go to the configured Azure endpoint.
 
-Review vendor advisories before deployment. The pinned release was chosen as an incident-recommended baseline, not certified vulnerability-free. Never enable verbose/body logging while debugging real credentials. Use dummy data and the mock integration test first.
+Keep dependencies reviewed and use the pinned image for reproducible installations. Avoid verbose/body logging when using real credentials. Use dummy data and the mock integration test for diagnostics.
