@@ -1,0 +1,22 @@
+name: tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af6839
+      - run: python3 -m unittest discover -s tests -v
+      - run: for script in setup.sh linux/uninstall.sh tests/integration.sh; do bash -n "$script"; done
+      - run: systemd-analyze verify linux/claude-azure-local.service
+      - run: ./tests/integration.sh
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af6839
+      - run: python -m unittest discover -s tests -v
+      - shell: powershell
+        run: |
+          ./tests/windows.ps1
+          ./tests/launcher.ps1

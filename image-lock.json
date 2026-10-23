@@ -1,0 +1,10 @@
+{
+  "version": "1.106.2",
+  "reviewed_date": "2026-10-23",
+  "source_repository": "https://github.com/BerriAI/litellm",
+  "source_revision": "49943cd52ea46aacf8db2e5cb2b890d580fe9bb4",
+  "images": {
+    "amd64": "ghcr.io/berriai/litellm@sha256:d1da6edc025e6a59be6faa50b4e8e42c115e1c99644aa3fc2ac416dd353f41da",
+    "arm64": "ghcr.io/berriai/litellm@sha256:82cb7a325d45793d8899575a768239e8079db986e25cbdebe414ec9a3586c4af"
+  }
+}

@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.env
+.env.*
+*.key
+*.dpapi
+gateway-token
+settings.json
+connection.json
+installed.json
+*.zip
