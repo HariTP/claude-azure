@@ -51,9 +51,11 @@ On Linux, make sure `~/.local/bin` is on PATH. If Windows blocks downloaded scri
 claude-azure --resume
 claude-azure --continue
 claude-azure --luna --resume
+claude-azure --astra --resume
+claude-azure --grok --resume
 ```
 
-Sol is the default. Add `--luna` to use Luna.
+Sol is the default. Use `--luna`, `--astra`, or `--grok` to select another model.
 
 The launcher uses its own settings and links to your existing project chats. Normal `claude` keeps its subscription login and settings. To resume an Azure-used conversation with a subscription Claude model, select the model explicitly:
 
@@ -65,10 +67,13 @@ When you continue a chat through Azure, that conversation's messages are sent to
 
 ## Models
 
-The default deployment names are `gpt-6.1-sol` and `gpt-6-luna`; you can enter your team's deployment names during setup.
+The default deployment names are `gpt-6.1-sol`, `gpt-6-luna`, `gpt-6-astra`, and `grok-4.6`; you can enter your team's deployment names during setup. All four use the same Azure endpoint and API key.
 
-- **Sol:** tool calls use the Responses API, with low reasoning by default.
+- **Sol and Astra:** tool calls use the Responses API, with low reasoning by default.
 - **Luna:** uses Chat Completions with reasoning disabled for tool compatibility. Its thinking/effort controls are ignored.
+- **Grok:** uses Chat Completions.
+
+The three GPT models have `[1m]` gateway aliases and a 900,000-token Claude Code compaction setting. The model picker shows the deployment names. Azure may enforce separate image-count limits before the token window fills; compact or start a new chat if a request exceeds those limits.
 
 LiteLLM handles API translation. Using non-Claude models this way is an unofficial Claude Code integration.
 

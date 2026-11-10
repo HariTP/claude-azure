@@ -61,8 +61,11 @@ def main():
     endpoint = normalize_endpoint(ask('Azure endpoint', old.get('endpoint', '')))
     sol = ask('Sol deployment', old.get('sol_deployment', 'gpt-6.1-sol'))
     luna = ask('Luna deployment', old.get('luna_deployment', 'gpt-6-luna'))
+    astra = ask('Astra deployment', old.get('astra_deployment', 'gpt-6-astra'))
+    grok = ask('Grok deployment', old.get('grok_deployment', 'grok-4.6'))
     port = int(ask('Local port', str(old.get('port', 48763))))
-    settings = validate(dict(endpoint=endpoint, sol_deployment=sol, luna_deployment=luna, port=port))
+    settings = validate(dict(endpoint=endpoint, sol_deployment=sol, luna_deployment=luna,
+                             astra_deployment=astra, grok_deployment=grok, port=port))
     # A previous instance may own the port; otherwise refuse a collision before asking for a key.
     existing = subprocess.run(['docker', 'inspect', 'claude-azure-local'], capture_output=True, text=True)
     if existing.returncode == 0:
@@ -83,7 +86,7 @@ def main():
         raise SystemExit('Unsupported Docker architecture: ' + arch)
     settings['image'] = images[arch]
     subprocess.run(['docker', 'pull', settings['image']], check=True)
-    print('Sol tools use Responses. Luna uses Chat Completions with reasoning disabled.')
+    print('Sol and Astra tools use Responses. Luna uses Chat Completions with reasoning disabled.')
     key = getpass.getpass('Azure key (hidden; never saved as plaintext): ').strip()
     if not key:
         raise SystemExit('No key entered; nothing installed.')
@@ -109,8 +112,16 @@ def main():
             if target.exists() or target.is_symlink():
                 raise SystemExit('Existing profile link conflicts; left unchanged: ' + name)
             target.symlink_to(source, target_is_directory=source.is_dir())
-    if not (claude_profile / 'settings.json').exists():
-        private_write(claude_profile / 'settings.json', '{}\n')
+    claude_settings_path = claude_profile / 'settings.json'
+    claude_settings = json.loads(claude_settings_path.read_text()) if claude_settings_path.exists() else {}
+    claude_settings['availableModels'] = [
+        'claude-azure-sol[1m]', 'claude-azure-luna[1m]',
+        'claude-azure-astra[1m]', 'claude-azure-grok',
+    ]
+    model_settings = claude_settings.setdefault('modelSettings', {})
+    for alias in ('claude-azure-sol', 'claude-azure-luna', 'claude-azure-astra'):
+        model_settings.setdefault(alias + '[1m]', {})['autoCompactWindow'] = 900000
+    private_write(claude_settings_path, json.dumps(claude_settings, indent=2) + '\n')
     destination.parent.mkdir(parents=True, exist_ok=True)
     # The launcher is a copied script; paths are derived from XDG_CONFIG_HOME at runtime.
     shutil.copy2(ROOT / 'linux/launch.py', destination)

@@ -29,6 +29,9 @@ class LauncherTests(unittest.TestCase):
             server = ThreadingHTTPServer(('127.0.0.1', 0), HealthHandler)
             threading.Thread(target=server.serve_forever, daemon=True).start()
             (profile / 'connection.json').write_text(json.dumps({'port': server.server_port}))
+            (profile / 'settings.json').write_text(json.dumps({
+                'sol_deployment': 'sol-team', 'luna_deployment': 'luna-team',
+                'astra_deployment': 'astra-team', 'grok_deployment': 'grok-team'}))
             (profile / 'gateway-token').write_text('mock-token')
             bindir = root / 'bin'; bindir.mkdir()
             fake = bindir / 'claude'
@@ -40,7 +43,7 @@ class LauncherTests(unittest.TestCase):
                 result = subprocess.run([sys.executable, str(Path(__file__).resolve().parents[1] / 'linux/launch.py'), '--luna', '--resume'],
                                         env=env, check=True, capture_output=True, text=True)
                 data = json.loads(result.stdout)
-                self.assertEqual(data['args'], ['--model', 'claude-azure-luna', '--resume'])
+                self.assertEqual(data['args'], ['--model', 'claude-azure-luna[1m]', '--resume'])
                 self.assertFalse(data['key_present'])
                 self.assertEqual(data['profile'], str(profile / 'claude'))
                 self.assertEqual(env['ANTHROPIC_API_KEY'], 'mock-parent-key')

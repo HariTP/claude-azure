@@ -43,7 +43,8 @@ def main():
 
     with request('/v1/models') as response:
         discovered = {model['id'] for model in json.load(response)['data']}
-    for model in ['claude-azure-sol', 'claude-azure-luna']:
+    for model in ['claude-azure-sol[1m]', 'claude-azure-luna[1m]',
+                  'claude-azure-astra[1m]', 'claude-azure-grok']:
         if model not in discovered:
             raise RuntimeError('Configured model missing from gateway discovery: ' + model)
         messages = [{'role': 'user', 'content': 'Call choose_color with color blue.'}]

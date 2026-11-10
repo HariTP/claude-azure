@@ -8,7 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from core import normalize_endpoint, validate, select_linux_storage, make_config, docker_args, normalize_request
 
 SETTINGS = {'endpoint': 'https://example.services.ai.azure.com/openai/v1/',
-            'sol_deployment': 'sol-team', 'luna_deployment': 'luna-team', 'port': 48763}
+            'sol_deployment': 'sol-team', 'luna_deployment': 'luna-team',
+            'astra_deployment': 'astra-team', 'grok_deployment': 'grok-team', 'port': 48763}
 
 
 class ConfigurationTests(unittest.TestCase):
@@ -30,7 +31,9 @@ class ConfigurationTests(unittest.TestCase):
             select_linux_storage('host+tpm2', False)
 
     def test_bad_deployments_and_ports(self):
-        for changes in ({'sol_deployment': '../bad'}, {'luna_deployment': 'x\nkey'}, {'port': 80}, {'port': 65536}, {'port': True}):
+        for changes in ({'sol_deployment': '../bad'}, {'luna_deployment': 'x\nkey'},
+                        {'astra_deployment': 'bad/name'}, {'grok_deployment': ''},
+                        {'port': 80}, {'port': 65536}, {'port': True}):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 validate({**SETTINGS, **changes})
 
@@ -40,7 +43,14 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual(SETTINGS, original)
         models = config['model_list']
         self.assertEqual(models[0]['litellm_params']['reasoning_effort'], 'low')
-        self.assertEqual(models[1]['litellm_params']['reasoning_effort'], 'none')
+        self.assertEqual({model['model_name'] for model in models}, {
+            'claude-azure-sol', 'claude-azure-sol[1m]',
+            'claude-azure-luna', 'claude-azure-luna[1m]',
+            'claude-azure-astra', 'claude-azure-astra[1m]', 'claude-azure-grok'})
+        self.assertEqual(models[2]['litellm_params']['reasoning_effort'], 'none')
+        self.assertEqual(models[4]['litellm_params']['reasoning_effort'], 'low')
+        self.assertNotIn('reasoning_effort', models[6]['litellm_params'])
+        self.assertEqual(models[6]['model_info']['display_name'], 'grok-team')
         self.assertTrue(all(x['litellm_params']['api_key'] == 'mock-azure-key' for x in models))
         self.assertNotIn('api_key', SETTINGS)
 
@@ -62,11 +72,13 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual(result['output_config'], {'format': {'type': 'json_schema'}})
 
     def test_sol_cannot_disable_reasoning_but_can_request_high(self):
-        result = normalize_request({'model': 'claude-azure-sol', 'thinking': {'type': 'disabled'}, 'reasoning_effort': 'none'})
+        result = normalize_request({'model': 'claude-azure-sol[1m]', 'thinking': {'type': 'disabled'}, 'reasoning_effort': 'none'})
         self.assertEqual(result['reasoning_effort'], 'low')
         self.assertEqual(result['thinking']['type'], 'enabled')
         result = normalize_request({'model': 'claude-azure-sol', 'reasoning_effort': 'high'})
         self.assertEqual(result['reasoning_effort'], 'high')
+        result = normalize_request({'model': 'claude-azure-astra[1m]', 'reasoning_effort': 'none'})
+        self.assertEqual(result['reasoning_effort'], 'low')
 
     def test_other_models_are_not_modified(self):
         request = {'model': 'unrelated', 'reasoning_effort': 'high'}

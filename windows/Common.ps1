@@ -40,13 +40,21 @@ function New-GatewayToken {
 }
 function New-GatewayConfig($Settings, [string]$AzureKey, [string]$Token) {
     $models = @()
-    foreach ($entry in @(@('claude-azure-sol', $Settings.sol_deployment, 'low', 'Azure Sol'),
-                          @('claude-azure-luna', $Settings.luna_deployment, 'none', 'Azure Luna'))) {
-        $models += @{
-            model_name = $entry[0]
-            litellm_params = @{ model = ('openai/' + $entry[1]); api_base = $Settings.endpoint;
-                api_key = $AzureKey.Trim(); reasoning_effort = $entry[2]; use_chat_completions_api = $true }
-            model_info = @{ display_name = $entry[3] }
+    foreach ($entry in @(@('claude-azure-sol', $Settings.sol_deployment, 'low'),
+                          @('claude-azure-luna', $Settings.luna_deployment, 'none'),
+                          @('claude-azure-astra', $Settings.astra_deployment, 'low'),
+                          @('claude-azure-grok', $Settings.grok_deployment, ''))) {
+        $parameters = @{ model = ('openai/' + $entry[1]); api_base = $Settings.endpoint;
+            api_key = $AzureKey.Trim(); use_chat_completions_api = $true }
+        if ($entry[2]) { $parameters.reasoning_effort = $entry[2] }
+        $names = @($entry[0])
+        if ($entry[0] -ne 'claude-azure-grok') { $names += ($entry[0] + '[1m]') }
+        foreach ($name in $names) {
+            $models += @{
+                model_name = $name
+                litellm_params = $parameters.Clone()
+                model_info = @{ display_name = $entry[1] }
+            }
         }
     }
     return @{

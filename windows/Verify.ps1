@@ -22,7 +22,8 @@ for ($i = 0; $i -lt 90; $i++) {
 if (-not $ready) { throw 'Gateway did not become ready. Check Docker Desktop and Task Scheduler.' }
 try { $models = (Invoke-RestMethod -Uri "$base/v1/models" -Headers $headers -TimeoutSec 5).data.id }
 catch { throw 'Gateway authentication or discovery failed; raw response withheld.' }
-foreach ($model in @('claude-azure-sol', 'claude-azure-luna')) {
+foreach ($model in @('claude-azure-sol[1m]', 'claude-azure-luna[1m]',
+                     'claude-azure-astra[1m]', 'claude-azure-grok')) {
     if ($models -notcontains $model) { throw "Discovery is missing $model" }
     $messages = @(@{ role = 'user'; content = 'Call choose_color with color blue.' })
     $payload = @{ model = $model; max_tokens = 1024; stream = $true; messages = $messages

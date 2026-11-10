@@ -22,13 +22,16 @@ if ($installed) {
         if ($label -ne 'true') { throw 'Container name occupied by an unmanaged container; left unchanged.' }
     }
 }
-$old = @{ endpoint = ''; sol_deployment = 'gpt-6.1-sol'; luna_deployment = 'gpt-6-luna'; port = 48763 }
+$old = @{ endpoint = ''; sol_deployment = 'gpt-6.1-sol'; luna_deployment = 'gpt-6-luna';
+    astra_deployment = 'gpt-6-astra'; grok_deployment = 'grok-4.6'; port = 48763 }
 if (Test-Path (Join-Path $profilePath 'settings.json')) { $old = Get-Content -Raw (Join-Path $profilePath 'settings.json') | ConvertFrom-Json }
 Write-Host 'Credential storage: Windows DPAPI CurrentUser. Startup runs at sign-in under this account.'
 $endpoint = Get-AzureEndpoint (Read-LocalSetting 'Azure endpoint' $old.endpoint)
 $sol = Read-LocalSetting 'Sol deployment' $old.sol_deployment
 $luna = Read-LocalSetting 'Luna deployment' $old.luna_deployment
-foreach ($name in @($sol, $luna)) { if ($name -notmatch '^[A-Za-z0-9_.-]{1,128}$') { throw 'Invalid deployment name.' } }
+$astra = Read-LocalSetting 'Astra deployment' $old.astra_deployment
+$grok = Read-LocalSetting 'Grok deployment' $old.grok_deployment
+foreach ($name in @($sol, $luna, $astra, $grok)) { if ($name -notmatch '^[A-Za-z0-9_.-]{1,128}$') { throw 'Invalid deployment name.' } }
 $port = [int](Read-LocalSetting 'Local port' ([string]$old.port))
 if ($port -lt 1024 -or $port -gt 65535) { throw 'Port must be between 1024 and 65535.' }
 if (-not $installed) {
@@ -39,8 +42,9 @@ $lock = Get-Content -Raw (Join-Path $repo 'image-lock.json') | ConvertFrom-Json
 $image = $lock.images.amd64
 & docker pull $image
 if ($LASTEXITCODE -ne 0) { throw 'Pinned image download failed; no credential was requested.' }
-$settings = @{ endpoint = $endpoint; sol_deployment = $sol; luna_deployment = $luna; port = $port; image = $image }
-Write-Host 'Sol tool calls use Responses; Luna uses Chat Completions with reasoning disabled.'
+$settings = @{ endpoint = $endpoint; sol_deployment = $sol; luna_deployment = $luna;
+    astra_deployment = $astra; grok_deployment = $grok; port = $port; image = $image }
+Write-Host 'Sol and Astra tool calls use Responses; Luna uses Chat Completions with reasoning disabled.'
 $secure = Read-Host 'Azure key (hidden)' -AsSecureString
 $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
 $bytes = $null
@@ -74,7 +78,25 @@ $null = New-Item -ItemType Directory -Path $claudeProfile -Force
 $target = Join-Path $claudeProfile 'projects'
 if (-not (Test-Path $target)) { $null = New-Item -ItemType Junction -Path $target -Target (Resolve-Path $projects).Path }
 elseif ((Get-Item -LiteralPath $target).Target -notcontains (Resolve-Path $projects).Path) { throw 'Existing chat-history link points elsewhere; left unchanged.' }
-if (-not (Test-Path (Join-Path $claudeProfile 'settings.json'))) { '{}' | Set-Content (Join-Path $claudeProfile 'settings.json') -Encoding UTF8 }
+$claudeSettingsPath = Join-Path $claudeProfile 'settings.json'
+$claudeSettings = [pscustomobject]@{}
+if (Test-Path $claudeSettingsPath) {
+    $claudeSettings = Get-Content -Raw $claudeSettingsPath | ConvertFrom-Json
+}
+$claudeSettings | Add-Member -NotePropertyName availableModels -NotePropertyValue @(
+    'claude-azure-sol[1m]', 'claude-azure-luna[1m]', 'claude-azure-astra[1m]', 'claude-azure-grok') -Force
+if (-not $claudeSettings.PSObject.Properties['modelSettings']) {
+    $claudeSettings | Add-Member -NotePropertyName modelSettings -NotePropertyValue ([pscustomobject]@{})
+}
+foreach ($alias in @('claude-azure-sol', 'claude-azure-luna', 'claude-azure-astra')) {
+    $name = $alias + '[1m]'
+    if (-not $claudeSettings.modelSettings.PSObject.Properties[$name]) {
+        $claudeSettings.modelSettings | Add-Member -NotePropertyName $name -NotePropertyValue ([pscustomobject]@{})
+    }
+    $claudeSettings.modelSettings.PSObject.Properties[$name].Value |
+        Add-Member -NotePropertyName autoCompactWindow -NotePropertyValue 900000 -Force
+}
+$claudeSettings | ConvertTo-Json -Depth 20 | Set-Content $claudeSettingsPath -Encoding UTF8
 $bin = Join-Path $profilePath 'bin'
 $null = New-Item -ItemType Directory -Path $bin -Force
 $cmd = '@echo off' + "`r`n" + 'powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "%LOCALAPPDATA%\ClaudeAzureLocal\Launch.ps1" %*' + "`r`n" + 'exit /b %errorlevel%'

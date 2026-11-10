@@ -7,6 +7,9 @@ CONTAINER = 'claude-azure-local'
 SERVICE = 'claude-azure-local.service'
 MODEL_SOL = 'claude-azure-sol'
 MODEL_LUNA = 'claude-azure-luna'
+MODEL_ASTRA = 'claude-azure-astra'
+MODEL_GROK = 'claude-azure-grok'
+GPT_MODELS = (MODEL_SOL, MODEL_LUNA, MODEL_ASTRA)
 
 
 def normalize_endpoint(value):
@@ -28,7 +31,7 @@ def normalize_endpoint(value):
 def validate(settings):
     result = dict(settings)
     result['endpoint'] = normalize_endpoint(result['endpoint'])
-    for field in ('sol_deployment', 'luna_deployment'):
+    for field in ('sol_deployment', 'luna_deployment', 'astra_deployment', 'grok_deployment'):
         if not re.fullmatch(r'[A-Za-z0-9_.-]{1,128}', result[field]):
             raise ValueError(f'Invalid deployment name: {field}')
     port = int(result['port'])
@@ -44,17 +47,19 @@ def make_config(settings, azure_key, gateway_token):
     if not azure_key or not gateway_token:
         raise ValueError('Both credentials must be nonempty.')
     models = []
-    for alias, deployment, effort, label in (
-        (MODEL_SOL, settings['sol_deployment'], 'low', 'Azure Sol'),
-        (MODEL_LUNA, settings['luna_deployment'], 'none', 'Azure Luna'),
+    for alias, deployment, effort in (
+        (MODEL_SOL, settings['sol_deployment'], 'low'),
+        (MODEL_LUNA, settings['luna_deployment'], 'none'),
+        (MODEL_ASTRA, settings['astra_deployment'], 'low'),
+        (MODEL_GROK, settings['grok_deployment'], None),
     ):
-        models.append({
-            'model_name': alias,
-            'litellm_params': {'model': 'openai/' + deployment, 'api_base': settings['endpoint'],
-                              'api_key': azure_key, 'reasoning_effort': effort,
-                              'use_chat_completions_api': True},
-            'model_info': {'display_name': label},
-        })
+        params = {'model': 'openai/' + deployment, 'api_base': settings['endpoint'],
+                  'api_key': azure_key, 'use_chat_completions_api': True}
+        if effort is not None:
+            params['reasoning_effort'] = effort
+        for name in ((alias, alias + '[1m]') if alias in GPT_MODELS else (alias,)):
+            models.append({'model_name': name, 'litellm_params': dict(params),
+                           'model_info': {'display_name': deployment}})
     return {
         'model_list': models,
         'litellm_settings': {
@@ -67,14 +72,14 @@ def make_config(settings, azure_key, gateway_token):
 
 
 def normalize_request(data):
-    """Keep Luna on Chat Completions and prevent Sol's unsupported off switch."""
+    """Keep Luna on Chat Completions and reasoning enabled for Sol and Astra."""
     model = data.get('model')
-    if model == MODEL_LUNA:
+    if model in (MODEL_LUNA, MODEL_LUNA + '[1m]'):
         data['reasoning_effort'] = 'none'
         data['thinking'] = {'type': 'disabled'}
         if isinstance(data.get('output_config'), dict):
             data['output_config'] = {k: v for k, v in data['output_config'].items() if k != 'effort'}
-    elif model == MODEL_SOL:
+    elif model in (MODEL_SOL, MODEL_SOL + '[1m]', MODEL_ASTRA, MODEL_ASTRA + '[1m]'):
         if data.get('reasoning_effort') in (None, 'none', 'minimal'):
             data['reasoning_effort'] = 'low'
         if isinstance(data.get('thinking'), dict) and data['thinking'].get('type') == 'disabled':

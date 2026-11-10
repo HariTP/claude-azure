@@ -7,16 +7,16 @@ $fixture = Join-Path ([IO.Path]::GetTempPath()) ('claude-azure-launch-' + [Guid]
 $env:LOCALAPPDATA = $fixture
 $profilePath = Join-Path $env:LOCALAPPDATA 'ClaudeAzureLocal'
 $null = New-Item -ItemType Directory -Path $profilePath -Force
-'{"port":48763}' | Set-Content (Join-Path $profilePath 'settings.json')
+'{"port":48763,"sol_deployment":"sol-team","luna_deployment":"luna-team","astra_deployment":"astra-team","grok_deployment":"grok-team"}' | Set-Content (Join-Path $profilePath 'settings.json')
 'mock-token' | Set-Content (Join-Path $profilePath 'gateway-token')
 $env:ANTHROPIC_API_KEY = 'original-user-credential-placeholder'
 $env:ANTHROPIC_BASE_URL = 'https://original.invalid'
 function global:Invoke-WebRequest { param($Uri, $TimeoutSec, [switch]$UseBasicParsing) return @{StatusCode=200} }
 function global:claude {
-    if ($env:ANTHROPIC_MODEL -ne 'claude-azure-luna') { throw 'Wrong model' }
+    if ($env:ANTHROPIC_MODEL -ne 'claude-azure-luna[1m]') { throw 'Wrong model' }
     if ($env:ANTHROPIC_API_KEY) { throw 'Inherited API key was not removed' }
     if ($env:ANTHROPIC_AUTH_TOKEN -ne 'mock-token') { throw 'Wrong gateway token' }
-    if (($args -join ' ') -ne '--model claude-azure-luna --resume') { throw ('Arguments corrupted: ' + ($args -join ' ')) }
+    if (($args -join ' ') -ne '--model claude-azure-luna[1m] --resume') { throw ('Arguments corrupted: ' + ($args -join ' ')) }
     $global:LaunchCalled = $true
     $global:LASTEXITCODE = 0
 }
