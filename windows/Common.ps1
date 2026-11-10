@@ -32,6 +32,14 @@ function Read-LocalSetting([string]$Prompt, [string]$Default) {
     if ([string]::IsNullOrWhiteSpace($value)) { return $Default }
     return $value.Trim()
 }
+function Get-SetupSettings($Saved) {
+    $settings = @{ endpoint = ''; sol_deployment = 'gpt-6.1-sol'; luna_deployment = 'gpt-6-luna';
+        astra_deployment = 'gpt-6-astra'; grok_deployment = 'grok-4.6'; port = 48763 }
+    if ($null -ne $Saved) {
+        foreach ($property in $Saved.PSObject.Properties) { $settings[$property.Name] = $property.Value }
+    }
+    return $settings
+}
 function New-GatewayToken {
     $bytes = New-Object byte[] 40
     $rng = [Security.Cryptography.RandomNumberGenerator]::Create()

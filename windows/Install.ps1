@@ -22,9 +22,11 @@ if ($installed) {
         if ($label -ne 'true') { throw 'Container name occupied by an unmanaged container; left unchanged.' }
     }
 }
-$old = @{ endpoint = ''; sol_deployment = 'gpt-6.1-sol'; luna_deployment = 'gpt-6-luna';
-    astra_deployment = 'gpt-6-astra'; grok_deployment = 'grok-4.6'; port = 48763 }
-if (Test-Path (Join-Path $profilePath 'settings.json')) { $old = Get-Content -Raw (Join-Path $profilePath 'settings.json') | ConvertFrom-Json }
+$savedSettings = $null
+if (Test-Path (Join-Path $profilePath 'settings.json')) {
+    $savedSettings = Get-Content -Raw (Join-Path $profilePath 'settings.json') | ConvertFrom-Json
+}
+$old = Get-SetupSettings $savedSettings
 Write-Host 'Credential storage: Windows DPAPI CurrentUser. Startup runs at sign-in under this account.'
 $endpoint = Get-AzureEndpoint (Read-LocalSetting 'Azure endpoint' $old.endpoint)
 $sol = Read-LocalSetting 'Sol deployment' $old.sol_deployment

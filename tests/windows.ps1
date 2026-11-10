@@ -11,6 +11,11 @@ function Assert-Equal($Actual, $Expected, [string]$Message) {
     if ($Actual -ne $Expected) { throw $Message }
 }
 Assert-Equal (Get-AzureEndpoint 'https://example.test/openai/v1/responses') 'https://example.test/openai/v1/' 'Endpoint normalization failed.'
+$previousSettings = '{"endpoint":"https://example.test/openai/v1/","sol_deployment":"sol-team","luna_deployment":"luna-team","port":48763}' | ConvertFrom-Json
+$upgradeSettings = Get-SetupSettings $previousSettings
+Assert-Equal $upgradeSettings.sol_deployment 'sol-team' 'Existing Sol deployment was lost.'
+Assert-Equal $upgradeSettings.astra_deployment 'gpt-6-astra' 'Astra upgrade default is missing.'
+Assert-Equal $upgradeSettings.grok_deployment 'grok-4.6' 'Grok upgrade default is missing.'
 $rejected = $false
 try { $null = Get-AzureEndpoint 'https://user:secret@example.test/' } catch { $rejected = $true }
 if (-not $rejected) { throw 'Credential-bearing URL was accepted.' }

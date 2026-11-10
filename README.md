@@ -30,6 +30,28 @@ cd claude-azure
 
 The installer asks for your Azure endpoint, deployment names, and API key. Key entry is hidden. The default local port is `48763`.
 
+## Upgrade an existing installation
+
+From your existing checkout, get the latest source and rerun setup:
+
+**Linux**
+
+```bash
+git pull --ff-only
+./setup.sh
+```
+
+**Windows PowerShell**
+
+```powershell
+git pull --ff-only
+.\Setup.ps1
+```
+
+The installer keeps the saved endpoint, Sol and Luna deployment names, local port, gateway token, and shared chat links. It asks for the Astra and Grok deployment names and your Azure API key again; enter the same key if it has not changed. The service is restarted with the new routes. Restart any open `claude-azure` sessions to refresh the model picker.
+
+These steps apply to installations made from this repository. If your command uses `~/.config/claude-azure` and the service is named `litellm-azure.service`, it is the earlier local setup, which this installer intentionally leaves in place.
+
 After setup, open a new terminal and run:
 
 ```text
